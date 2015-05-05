@@ -1,0 +1,126 @@
+package main
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"syscall"
+)
+
+var supportedCommand = map[string]string{
+	"go": "/usr/bin/go",
+	//"godoc": "/usr/bin/godoc",
+}
+
+var configPath = []string{
+	"$XDG_CONFIG_HOME/gopathrc",
+	"$HOME/.gopathrc",
+}
+
+type config struct {
+	Command map[string]string `json:"command"`
+}
+
+func setPath() error {
+	p, err := filepath.Abs(".")
+	if err != nil {
+		return err
+	}
+
+	for p != "/" {
+		fis, err := ioutil.ReadDir(p)
+		if err != nil {
+			return err
+		}
+		for _, fi := range fis {
+			if fi.IsDir() && fi.Name() == "src" {
+				return os.Setenv("GOPATH", p)
+			}
+		}
+		p = filepath.Dir(p)
+	}
+	return errors.New("unable to guess GOPATH")
+}
+
+func parseConfig() *config {
+	var data []byte
+	for _, fname := range configPath {
+		f, err := os.Open(fname)
+		if err != nil {
+			continue
+		}
+
+		data, err = ioutil.ReadAll(f)
+		f.Close()
+		if err != nil {
+			continue
+		}
+	}
+
+	c := &config{}
+	json.Unmarshal(data, c)
+
+	// make a little user friendly
+	if c.Command == nil {
+		c.Command = make(map[string]string)
+		c.Command["go"] = "/usr/bin/go"
+	}
+	return c
+}
+
+func main() {
+	cfg := parseConfig()
+
+	// find the original binary.
+	args := os.Args
+	if filepath.Base(args[0]) == "gopath" {
+		args = args[1:]
+	}
+
+	if len(args) == 0 {
+		fmt.Fprintf(os.Stderr, "TODO: usage\n")
+		os.Exit(0)
+	}
+
+	cmd := filepath.Base(args[0])
+	bin, ok := cfg.Command[cmd]
+	if !ok {
+		bin, _ = exec.LookPath(cmd + ".bin")
+	}
+
+	// set GOPATH we cannot find it in environment.
+	if os.Getenv("GOPATH") == "" {
+		if err := setPath(); err != nil {
+			fmt.Fprintf(os.Stderr, "gopath: %s\n", err)
+		} else {
+			// make some noise to let caller know the underlying work, for debug purpose.
+			if len(args) == 1 {
+				fmt.Fprintf(os.Stderr, "goapth: GOPATH set to %s\n", os.Getenv("GOPATH"))
+			}
+		}
+	}
+
+	c := exec.Cmd{
+		Path:   bin,
+		Args:   args,
+		Stdin:  os.Stdin,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	}
+
+	err := c.Run()
+	if err == nil {
+		os.Exit(0)
+	}
+	if ee, ok := err.(*exec.ExitError); ok {
+		if ws, ok := ee.Sys().(syscall.WaitStatus); ok {
+			os.Exit(ws.ExitStatus())
+		}
+	}
+	fmt.Fprintf(os.Stderr, "gopath: error when calling original binary: %s\n", err)
+	os.Exit(1)
+}
