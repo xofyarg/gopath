@@ -11,13 +11,9 @@ import (
 	"syscall"
 )
 
-var supportedCommand = map[string]string{
-	"go": "/usr/bin/go",
-	//"godoc": "/usr/bin/godoc",
-}
-
 var configPath = []string{
 	"$XDG_CONFIG_HOME/gopathrc",
+	"$HOME/.config/gopathrc",
 	"$HOME/.gopathrc",
 }
 
@@ -49,15 +45,15 @@ func setPath() error {
 func parseConfig() *config {
 	var data []byte
 	for _, fname := range configPath {
-		f, err := os.Open(fname)
+		f, err := os.Open(os.ExpandEnv(fname))
 		if err != nil {
 			continue
 		}
 
 		data, err = ioutil.ReadAll(f)
 		f.Close()
-		if err != nil {
-			continue
+		if err == nil {
+			break
 		}
 	}
 
@@ -121,6 +117,7 @@ func main() {
 			os.Exit(ws.ExitStatus())
 		}
 	}
-	fmt.Fprintf(os.Stderr, "gopath: error when calling original binary: %s\n", err)
+	fmt.Fprintf(os.Stderr, "gopath: error when calling original binary(%s): %s\n",
+		bin, err)
 	os.Exit(1)
 }
