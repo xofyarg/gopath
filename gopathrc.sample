@@ -1,0 +1,7 @@
+{
+  "command":
+    {
+      "go":    "/usr/bin/go"
+    , "godoc": "/usr/bin/godoc"
+    }
+}

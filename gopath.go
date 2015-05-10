@@ -69,8 +69,6 @@ func parseConfig() *config {
 }
 
 func main() {
-	cfg := parseConfig()
-
 	// find the original binary.
 	args := os.Args
 	if filepath.Base(args[0]) == "gopath" {
@@ -78,17 +76,19 @@ func main() {
 	}
 
 	if len(args) == 0 {
-		fmt.Fprintf(os.Stderr, "TODO: usage\n")
+		fmt.Fprintf(os.Stderr, "This program is not meant to be called directly,"+
+			" please see the README for usage.\n")
 		os.Exit(0)
 	}
 
+	cfg := parseConfig()
 	cmd := filepath.Base(args[0])
 	bin, ok := cfg.Command[cmd]
 	if !ok {
 		bin, _ = exec.LookPath(cmd + ".bin")
 	}
 
-	// set GOPATH we cannot find it in environment.
+	// set GOPATH if we cannot find it in environment.
 	if os.Getenv("GOPATH") == "" {
 		if err := setPath(); err != nil {
 			fmt.Fprintf(os.Stderr, "gopath: %s\n", err)
