@@ -33,7 +33,8 @@ func setPath() error {
 			return err
 		}
 		for _, fi := range fis {
-			if fi.IsDir() && fi.Name() == "src" {
+			if ((fi.Mode()&os.ModeDir != 0) || (fi.Mode()&os.ModeSymlink != 0)) &&
+				fi.Name() == "src" {
 				return os.Setenv("GOPATH", p)
 			}
 		}
