@@ -91,11 +91,12 @@ func main() {
 
 	// set GOPATH if we cannot find it in environment.
 	if os.Getenv("GOPATH") == "" {
-		if err := setPath(); err != nil {
-			fmt.Fprintf(os.Stderr, "gopath: %s\n", err)
-		} else {
-			// make some noise to let caller know the underlying work, for debug purpose.
-			if len(args) == 1 {
+		err := setPath()
+		// make some noise to let caller know the underlying work, for debug purpose.
+		if len(args) == 1 {
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "gopath: %s\n", err)
+			} else {
 				fmt.Fprintf(os.Stderr, "goapth: GOPATH set to %s\n", os.Getenv("GOPATH"))
 			}
 		}
