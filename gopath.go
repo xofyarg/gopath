@@ -11,6 +11,9 @@ import (
 	"syscall"
 )
 
+const Usage = "This program is not meant to be called directly," +
+	" please see the README for usage.\n"
+
 var configPath = []string{
 	"$XDG_CONFIG_HOME/gopathrc",
 	"$HOME/.config/gopathrc",
@@ -73,13 +76,11 @@ func main() {
 	// find the original binary.
 	args := os.Args
 	if filepath.Base(args[0]) == "gopath" {
+		if len(args) == 1 || args[1][0] == '-' {
+			fmt.Fprintf(os.Stderr, Usage)
+			os.Exit(0)
+		}
 		args = args[1:]
-	}
-
-	if len(args) == 0 {
-		fmt.Fprintf(os.Stderr, "This program is not meant to be called directly,"+
-			" please see the README for usage.\n")
-		os.Exit(0)
 	}
 
 	cfg := parseConfig()
@@ -87,6 +88,11 @@ func main() {
 	bin, ok := cfg.Command[cmd]
 	if !ok {
 		bin, _ = exec.LookPath(cmd + ".bin")
+	}
+
+	if bin == "" {
+		fmt.Fprintf(os.Stderr, "gopath: cannot find executable \"%s\" in path\n", args[0])
+		os.Exit(1)
 	}
 
 	// set GOPATH if we cannot find it in environment.
