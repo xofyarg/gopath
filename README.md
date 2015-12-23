@@ -24,7 +24,7 @@ effect of $GOPATH according to $PWD.
 ## Build
 
 ```shell
-go get repo.anb.im/gopath
+go get go.papla.net/gopath
 ```
 gopath is go-getable, you just need to put it into your $PATH after
 build.
